@@ -4,7 +4,7 @@
  *
  * @package     Yireo_RepeatedSales
  * @author      Yireo (http://www.yireo.com/)
- * @copyright   Copyright (c) 2013 Yireo (http://www.yireo.com/)
+ * @copyright   Copyright 2015 Yireo (http://www.yireo.com/)
  * @license     Open Software License
  */
 
@@ -42,7 +42,11 @@ class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product extends Mage_Rule
             ->setQuoteItemPrice($object->getPrice()) // possible bug: need to use $object->getBasePrice()
             ->setQuoteItemRowTotal($object->getBaseRowTotal());
 
-        $product->setPreviousOrder($this->isPreviouslyOrdered($product));
+        $previousOrder = $this->isPreviouslyOrdered($product);
+        $anyPreviousOrder = $this->hasAnyPreviousOrder();
+
+        $product->setPreviousOrder($previousOrder);
+        $product->setAnyPreviousOrder($anyPreviousOrder);
 
         $valid = parent::validate($product);
         if (!$valid && $product->getTypeId() == Mage_Catalog_Model_Product_Type_Configurable::TYPE_CODE) {
@@ -53,23 +57,19 @@ class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product extends Mage_Rule
         return $valid;
     }
 
-    protected function isPreviouslyOrdered($product)
+    protected function hasAnyPreviousOrder()
     {
-        if(Mage::getSingleton('customer/session')->isLoggedIn() == false) {
+        $previousOrderIds = $this->getPreviousOrderIds();
+        if(empty($previousOrderIds)) {
             return false;
         }
 
-        $customer = Mage::helper('customer')->getCustomer();
-        $previousOrdersCollection = Mage::getModel('sales/order')->getCollection()
-            ->addFieldToFilter('customer_id', $customer->getId())
-            ->addFieldToFilter('state', Mage_Sales_Model_Order::STATE_COMPLETE)
-        ;
+        return true;
+    }
 
-        $previousOrderIds = array();
-        foreach($previousOrdersCollection as $previousOrder) {
-            $previousOrderIds[] = $previousOrder->getId();
-        }
-
+    protected function isPreviouslyOrdered($product)
+    {
+        $previousOrderIds = $this->getPreviousOrderIds();
         if(empty($previousOrderIds)) {
             return false;
         }
@@ -104,5 +104,25 @@ class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product extends Mage_Rule
         }
         
         return false;
+    }
+
+    public function getPreviousOrderIds()
+    {
+        if(Mage::getSingleton('customer/session')->isLoggedIn() == false) {
+            return false;
+        }
+
+        $customer = Mage::helper('customer')->getCustomer();
+        $previousOrdersCollection = Mage::getModel('sales/order')->getCollection()
+            ->addFieldToFilter('customer_id', $customer->getId())
+            ->addFieldToFilter('state', Mage_Sales_Model_Order::STATE_COMPLETE)
+        ;
+
+        $previousOrderIds = array();
+        foreach($previousOrdersCollection as $previousOrder) {
+            $previousOrderIds[] = $previousOrder->getId();
+        }
+
+        return $previousOrderIds;
     }
 }

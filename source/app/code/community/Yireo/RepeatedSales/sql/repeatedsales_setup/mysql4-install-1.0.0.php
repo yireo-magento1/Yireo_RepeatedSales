@@ -12,16 +12,16 @@
 $installer = $this;
 $installer->startSetup();
 
-$installer->addAttribute('catalog_product', 'previous_order', array(
+$installer->addAttribute('catalog_product', 'current_or_previous_order', array(
     'type'              => 'int',
     'backend'           => '',
     'frontend'          => '',
-    'label'             => 'Previous Order',
+    'label'             => 'Current or Previous Order',
     'input'             => 'boolean',
     'class'             => '',
     'source'            => 'eav/entity_attribute_source_boolean',
     'global'            => Mage_Catalog_Model_Resource_Eav_Attribute::SCOPE_GLOBAL,
-    'visible'           => false,
+    'visible'           => true,
     'required'          => false,
     'user_defined'      => false,
     'default'           => '0',
@@ -31,7 +31,10 @@ $installer->addAttribute('catalog_product', 'previous_order', array(
     'visible_on_front'  => false,
     'unique'            => false,
     'apply_to'          => 'simple,configurable,virtual,bundle,grouped',
-    'is_configurable'   => false
+    'configurable'      => false,
+    'used_for_promo_rules' => true
+    'is_configurable'      => false,
+    'is_used_for_promo_rules' => true
 ));
 
 $installer->endSetup();
