@@ -94,7 +94,7 @@ class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product extends Mage_Rule
                 return true;
             }
 
-            /* @todo: move this to an observer event */
+            /** @todo: move this to an observer event */
             if(preg_match('/([a-zA-Z]+)([0-9]+)-([0-9]+)/', $sku, $matchSku) 
                 && preg_match('/([a-zA-Z]+)([0-9]+)-([0-9]+)/', $previousSku, $matchPreviousSku)) {
                 if($matchSku[2] == $matchPreviousSku[2]) {
