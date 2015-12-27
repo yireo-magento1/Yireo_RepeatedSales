@@ -32,7 +32,7 @@ $installer->addAttribute('catalog_product', 'current_or_previous_order', array(
     'unique'            => false,
     'apply_to'          => 'simple,configurable,virtual,bundle,grouped',
     'configurable'      => false,
-    'used_for_promo_rules' => true
+    'used_for_promo_rules' => true,
     'is_configurable'      => false,
     'is_used_for_promo_rules' => true
 ));
