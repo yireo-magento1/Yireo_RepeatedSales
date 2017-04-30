@@ -4,10 +4,13 @@
  *
  * @package     Yireo_RepeatedSales
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2015 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2017 Yireo (https://www.yireo.com/)
  * @license     Open Source License
  */
 
+/**
+ * Class Yireo_RepeatedSales_Helper_Data
+ */
 class Yireo_RepeatedSales_Helper_Data extends Mage_Core_Helper_Abstract
 {
     /**
@@ -17,7 +20,7 @@ class Yireo_RepeatedSales_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function enabled()
     {
-        if ((bool)Mage::getStoreConfig('advanced/modules_disable_output/Yireo_RepeatedSales')) {
+        if ((bool) Mage::getStoreConfig('advanced/modules_disable_output/Yireo_RepeatedSales')) {
             return false;
         }
 
@@ -25,15 +28,27 @@ class Yireo_RepeatedSales_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
-     * @param null $key
-     * @param null $default_value
+     * @param string $key
+     * @param mixed $defaultValue
      *
-     * @return mixed|null
+     * @return mixed
      */
-    public function getConfigValue($key = null, $default_value = null)
+    public function getConfigValue($key, $defaultValue = null)
     {
         $value = Mage::getStoreConfig($key);
-        if(empty($value)) $value = $default_value;
+        if(empty($value)) {
+            $value = $defaultValue;
+        }
+
         return $value;
+    }
+
+    /**
+     * @param string $string
+     */
+    public function debug($string)
+    {
+        //Mage::log($string);
+        file_put_contents(BP. '/var/log/system.log', $string."\n", FILE_APPEND);
     }
 }

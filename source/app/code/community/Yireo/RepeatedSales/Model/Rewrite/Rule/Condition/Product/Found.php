@@ -4,10 +4,13 @@
  *
  * @package     Yireo_RepeatedSales
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2015 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2017 Yireo (https://www.yireo.com/)
  * @license     Open Software License
  */
 
+/**
+ * Class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product_Found
+ */
 class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product_Found extends Mage_SalesRule_Model_Rule_Condition_Product_Found
 {
     /**
@@ -18,18 +21,24 @@ class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product_Found extends Mag
      */
     public function validate(Varien_Object $object)
     {
-        $all = $this->getAggregator()==='all';
+        $all = $this->getAggregator() === 'all';
         $true = (bool)$this->getValue();
         $found = false;
-        foreach ($this->getCustomerOrderItems($object->getAllItems()) as $item) {
+
+        $quoteItems = $object->getAllItems();
+        $quoteItems = $this->appendCustomerOrderItems($quoteItems);
+
+        foreach ($quoteItems as $quoteItem) {
             $found = $all;
-            foreach ($this->getConditions() as $cond) {
-                $validated = $cond->validate($item);
+            foreach ($this->getConditions() as $condition) {
+                /** @var Mage_Rule_Model_Condition_Abstract $condition */
+                $validated = $condition->validate($quoteItem);
                 if (($all && !$validated) || (!$all && $validated)) {
                     $found = $validated;
                     break;
                 }
             }
+
             if (($found && $true) || (!$true && $found)) {
                 break;
             }
@@ -39,67 +48,82 @@ class Yireo_RepeatedSales_Model_Rewrite_Rule_Condition_Product_Found extends Mag
         if ($found && $true) {
             return true;
         }
+
         // Not found and we're making sure it doesn't exist
-        elseif (!$found && !$true) {
+        if (!$found && !$true) {
             return true;
         }
 
         return false;
     }
 
-    private function getCustomerOrderItems($currentItemsCollection)
+    /**
+     * @param array $currentItemsCollection
+     *
+     * @return array
+     */
+    private function appendCustomerOrderItems($currentItemsCollection)
     {
-        if(Mage::getSingleton('customer/session')->isLoggedIn() == false) {
+        if($this->getOrderItemHelper()->isCustomerLoggedIn() === false) {
             return $currentItemsCollection;
         }
 
-        $customer = Mage::helper('customer')->getCustomer();
-        $previousOrdersCollection = Mage::getModel('sales/order')->getCollection()
-            ->addFieldToFilter('customer_id', $customer->getId())
-            ->addFieldToFilter('state', Mage_Sales_Model_Order::STATE_COMPLETE)
-        ;
-
-        $previousOrderIds = array();
-        foreach($previousOrdersCollection as $previousOrder) {
-            $previousOrderIds[] = $previousOrder->getId();
-        }
-
-        if(empty($previousOrderIds)) {
+        try {
+            $previousOrderItemsCollection = $this->getOrderItemHelper()->getPreviousOrderItemCollection();
+        } catch(Exception $e) {
             return $currentItemsCollection;
         }
 
-        $previousOrderItemsCollection = Mage::getModel('sales/order_item')->getCollection()
-            ->addFieldToFilter('order_id', $previousOrderIds)
-        ;
+        if (empty($previousOrderItemsCollection)) {
+            return $currentItemsCollection;
+        }
 
         // Merge the results
-        $mergeType = (is_array($currentItemsCollection)) ? 'array' : 'collection';
         foreach($previousOrderItemsCollection as $previousOrderItem) {
 
+            /** @var Mage_Sales_Model_Order_Item $previousOrderItem */
             $product = $previousOrderItem->getProduct();
-            $order = $previousOrderItem->getOrder();
-            if($order->getState() != Mage_Sales_Model_Order::STATE_COMPLETE) {
-                continue;
-            }
-
-            if($previousOrderItem->getQtyCanceled() == $previousOrderItem->getQtyOrdered()) {
-                continue;
-            }
-
-            if($previousOrderItem->getQtyRefunded() == $previousOrderItem->getQtyInvoiced()) {
+            if($this->getOrderItemHelper()->isMatchableOrderItem($previousOrderItem) === false) {
                 continue;
             }
 
             $product->setData('previous_order', 1);
-            $previousOrderItem->setProduct($product);
+            $previousOrderItem->setData('product', $product);
+            $previousOrderItem->setData('previous_order', 1);
 
-            if($mergeType == 'array') {
-                $currentItemsCollection[] = $previousOrderItem;
-            } else {
-                $currentItemsCollection->addItem($previousOrderItem);
-            }
+            $this->addToCollection($previousOrderItem, $currentItemsCollection);
         }
         
         return $currentItemsCollection;
+    }
+
+
+    /**
+     * @param Mage_Sales_Model_Order_Item $item
+     * @param Varien_Data_Collection|array $collection
+     */
+    private function addToCollection(Mage_Sales_Model_Order_Item $item, &$collection)
+    {
+        $mergeType = (is_array($collection)) ? 'array' : 'collection';
+        if($mergeType == 'array') {
+            $collection[] = $item;
+        } else {
+            $collection->addItem($item);
+        }
+    }
+
+    /**
+     * @return Yireo_RepeatedSales_Helper_OrderItem
+     */
+    private function getOrderItemHelper()
+    {
+        /** @var Yireo_RepeatedSales_Helper_OrderItem $helper */
+        $helper = Mage::helper('repeatedsales/orderItem');
+        return $helper;
+    }
+
+    private function log($message)
+    {
+        Mage::helper('repeatedsales')->debug($message);
     }
 }
